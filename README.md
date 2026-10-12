@@ -1,66 +1,52 @@
-# 📊 Sales Analytics Dashboard
+# 📊 Retail Analytics & ML Platform
 
-An interactive data science dashboard built with **Python, Streamlit, Plotly and scikit-learn**. It analyses retail sales data and shows KPIs, trends, a revenue forecast and customer segments.
+End-to-end retail analytics app built with Streamlit: backtested forecasting, customer segmentation,
+churn prediction with explainability, anomaly detection and an optional LLM assistant.
 
 ## Features
-- **Data:** built-in synthetic sample data, or upload your own CSV
-- **Filters:** date range, category, region
-- **KPIs:** total revenue, orders, average order value, unique customers
-- **EDA charts:** monthly trend, revenue by weekday, year × month heatmap, category share, region comparison
-- **Forecast:** Linear Regression (time trend + month-of-year seasonality) for the next 1-12 months
-- **Customer segmentation:** RFM features + KMeans (Champions, Loyal, Potential, At Risk, Lost)
-- **Currency:** view values in $ or ₹ using an exchange rate you enter
-- **Export:** download the filtered data and customer segments as CSV
+- **Welcome + login page** (demo auth) before the dashboard
+- **Overview**: KPIs, trend, weekday, heatmap, category/region split, STL anomaly detection
+- **Forecast Lab**: walk-forward backtest of 4 models (Seasonal Naive, Linear, Holt-Winters, Hybrid Trend+GBM), MAE/RMSE/MAPE, prediction intervals
+- **Customers**: RFM + KMeans (k chosen by silhouette), cohort retention heatmap
+- **Churn**: Logistic Regression vs HistGradientBoosting, ROC-AUC / PR-AUC, permutation importance, revenue-at-risk table
+- **AI Assistant** (optional, Anthropic API key): executive summary from computed facts; "Ask your data" where the LLM returns a JSON query spec that is validated against an allow-list (no code execution)
 
-## Tech stack
-Python · Streamlit · pandas · NumPy · Plotly · scikit-learn
-
-## Dataset
-Tested with the Superstore sales dataset from Kaggle:
-https://www.kaggle.com/datasets/mayurjare/superstore-data
-
-The dataset is not included in this repository. Download it, extract it to a `sample-dataset/` folder, then convert it with `prepare_data.py` (see below).
-
-## Project structure
-```
-intern-project/
-├── app.py               # Streamlit dashboard
-├── prepare_data.py      # Converts Superstore.csv to the dashboard format
-├── requirements.txt
-├── README.md
-└── sample-dataset/      # (not in repo) place Superstore.csv here
-```
-
-## Setup and run
+## Run locally
 ```bash
 python -m venv venv
-venv\Scripts\activate          # Mac/Linux: source venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
+venv\Scripts\activate            # macOS/Linux: source venv/bin/activate
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
-Open `http://localhost:8501` in your browser. Without any upload, the app shows the built-in sample data.
+Demo login: `admin / admin123` (override with `DASH_USER` / `DASH_PASS` env vars or Streamlit secrets), or continue as guest.
 
-## Using the Superstore dataset
-1. Download the dataset from Kaggle and put `Superstore.csv` in `sample-dataset/`.
-2. Convert it:
-   ```bash
-   python prepare_data.py
-   ```
-   This creates `superstore_clean.csv`.
-3. In the dashboard sidebar, upload `superstore_clean.csv`. Values are shown in $ (the original currency); choose ₹ and enter an exchange rate to convert.
+## Run with Docker
+```bash
+docker build -t retail-analytics .
+docker run -p 8501:8501 retail-analytics
+```
 
-## Using your own CSV
-Required columns (exact names): `order_date, customer_id, category, region, quantity, unit_price`
+## Tests
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+CI runs the same tests on every push (`.github/workflows/ci.yml`).
+
+## Own CSV format
+Columns (exact names): `order_date, customer_id, category, region, quantity, unit_price`
 
 | order_date | customer_id | category | region | quantity | unit_price |
 |------------|-------------|----------|--------|----------|-----------|
 | 2025-03-14 | 1042 | Clothing | South | 2 | 1299.00 |
 
-## Notes and limitations
-- The forecast model is evaluated on the data it was trained on, so its R² is optimistic. Treat the forecast as a rough guide.
-- The exchange rate is entered manually and is not fetched automatically.
+Rows with quantity or unit_price <= 0 are dropped. The forecast backtest needs at least 18 months of data.
 
-## Possible improvements
-- Train/test split and backtesting for the forecast
-- Prophet or SARIMA models
-- Deploy on Streamlit Community Cloud
+## Method notes
+- Backtest: expanding window, 1-step-ahead; each prediction uses only earlier months (no leakage).
+- Churn: features use only orders up to a snapshot date; label = no order in the following N days; metrics are on a 25% hold-out.
+- The sample data is synthetic. Swap in a real dataset for meaningful results.
+
+## Limitations
+- Login is a demo gate, not production security.
+- Holt-Winters uses seasonality only with >= 24 months of training data.

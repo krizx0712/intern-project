@@ -3,3 +3,5 @@ pandas>=2.0
 numpy>=1.26
 plotly>=5.20
 scikit-learn>=1.4
+statsmodels>=0.14
+anthropic>=0.40   # optional: only needed for the AI Assistant tab
